@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPSC Current Affairs Diary</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#f3f5f9;
+ color:#202b3c;
+}
+header{
+ background:#17345b;
+ color:white;
+ text-align:center;
+ padding:22px 12px;
+}
+header h1{margin:0 0 8px}
+main{max-width:950px;margin:22px auto;padding:0 14px}
+.panel{
+ background:white;
+ border-radius:12px;
+ padding:18px;
+ margin-bottom:16px;
+ box-shadow:0 2px 10px #0000000c;
+}
+h2{font-size:20px;margin-top:0}
+button,select,input,textarea{font:inherit}
+button{
+ border:1px solid #ccd5e1;
+ border-radius:8px;
+ padding:11px;
+ background:#f7f9fc;
+ cursor:pointer;
+}
+button:hover{background:#e5edf8}
+.grid{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:9px;
+}
+.days{
+ display:grid;
+ grid-template-columns:repeat(7,1fr);
+ gap:7px;
+}
+.active{background:#245b9e;color:white}
+.saved{border:2px solid #26945a}
+.subject{
+ text-align:left;
+ width:100%;
+ margin:5px 0;
+ background:#edf2f8;
+}
+select,input,textarea{
+ width:100%;
+ padding:11px;
+ border:1px solid #cbd5e1;
+ border-radius:7px;
+ margin:6px 0 12px;
+}
+textarea{min-height:110px;resize:vertical}
+.hidden{display:none}
+.primary{
+ background:#176b43;
+ color:white;
+ border:0;
+}
+.danger{background:#fff0f0;color:#a12626}
+.back{margin-bottom:15px}
+.news-card{
+ border:1px solid #dce3ed;
+ border-radius:10px;
+ padding:14px;
+ margin:12px 0;
+}
+.news-card h3{margin-top:0}
+.step-label{font-weight:bold}
+small{color:#64748b}
+@media(max-width:500px){
+ .grid{grid-template-columns:repeat(2,1fr)}
+ .days{gap:4px}
+ button{padding:9px 4px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>UPSC Current Affairs Diary</h1>
+<p>Daily Current Affairs Notes</p>
+</header>
+
+<main>
+
+<!-- YEAR AND MONTH PAGE -->
+<section id="monthPage" class="panel">
+<h2>Select Year</h2>
+<select id="yearSelect"></select>
+
+<h2>Select Month</h2>
+<div id="monthList" class="grid"></div>
+</section>
+
+<!-- DATE PAGE -->
+<section id="datePage" class="panel hidden">
+<button class="back" onclick="goMonths()">← Back to Months</button>
+<h2 id="dateHeading"></h2>
+<div id="dateList" class="days"></div>
+</section>
+
+<!-- SUBJECT PAGE -->
+<section id="subjectPage" class="panel hidden">
+<button class="back" onclick="goDates()">← Back to Dates</button>
+<h2 id="subjectHeading"></h2>
+<div id="subjectList"></div>
+</section>
+
+<!-- CURRENT AFFAIRS PAGE -->
+<section id="newsPage" class="panel hidden">
+<button class="back" onclick="goSubjects()">← Back to Topics</button>
+
+<h2 id="newsHeading"></h2>
+<button class="primary" onclick="addNews()">+ Add New Current Affairs</button>
+
+<div id="newsList"></div>
+</section>
+
+</main>
+
+<script>
+
+const monthNames=[
+"January","February","March","April",
+"May","June","July","August",
+"September","October","November","December"
+];
+
+const subjects=[
+"National News",
+"International Relations",
+"Indian Polity",
+"Economy",
+"Environment",
+"Science and Technology",
+"Government Schemes",
+"Editorial",
+"Social Issues",
+"Reports and Indexes"
+];
+
+const steps=[
+"Date",
+"Topic",
+"What Happened?",
+"Background",
+"Why Is It Important?",
+"Government Actions or Solutions",
+"UPSC Relevance",
+"Important Keywords"
+];
+
+const today=new Date();
+
+let year=today.getFullYear();
+let month=0;
+let date=1;
+let subject="";
+let editingIndex=-1;
+let currentNews=[];
+
+const $=id=>document.getElementById(id);
+
+function showPage(id){
+ ["monthPage","datePage","subjectPage","newsPage"]
+ .forEach(p=>$(p).classList.add("hidden"));
+ $(id).classList.remove("hidden");
+ window.scrollTo(0,0);
+}
+
+function key(){
+ return "upsc-"+year+"-"+month+"-"+date+"-"+subject;
+}
+
+// YEAR SELECTOR
+function setupYears(){
+ const select=$("yearSelect");
+ for(let y=today.getFullYear()+1;y>=today.getFullYear()-10;y--){
+  const option=document.createElement("option");
+  option.value=y;
+  option.textContent=y;
+  select.appendChild(option);
+ }
+ select.value=year;
+ select.onchange=()=>{
+  year=Number(select.value);
+  showMonths();
+ };
+}
+
+// MONTHS
+function showMonths(){
+ const list=$("monthList");
+ list.innerHTML="";
+
+ monthNames.forEach((name,index)=>{
+  const button=document.createElement("button");
+  button.textContent=name;
+  button.onclick=()=>{
+   month=index;
+   showDates();
+  };
+  list.appendChild(button);
+ });
+ showPage("monthPage");
+}
+
+// DATES
+function showDates(){
+ $("dateHeading").textContent=
+ monthNames[month]+" "+year;
+
+ const list=$("dateList");
+ list.innerHTML="";
+
+ const total=new Date(year,month+1,0).getDate();
+
+ for(let d=1;d<=total;d++){
+  const button=document.createElement("button");
+  button.textContent=d;
+
+  const hasNotes=subjects.some(s=>{
+   try{
+    const data=JSON.parse(
+     localStorage.getItem(
+      "upsc-"+year+"-"+month+"-"+d+"-"+s
+     )||"[]"
+    );
+    return data.length>0;
+   }catch(e){return false;}
+  });
+
+  if(hasNotes)button.classList.add("saved");
+
+  button.onclick=()=>{
+   date=d;
+   showSubjects();
+  };
+
+  list.appendChild(button);
+ }
+ showPage("datePage");
+}
+
+// TOPICS
+function showSubjects(){
+ $("subjectHeading").textContent=
+ date+" "+monthNames[month]+" "+year;
+
+ const list=$("subjectList");
+ list.innerHTML="";
+
+ subjects.forEach(name=>{
+  const button=document.createElement("button");
+  button.className="subject";
+  button.textContent="➜ "+name;
+  button.onclick=()=>{
+   subject=name;
+   showNews();
+  };
+  list.appendChild(button);
+ });
+
+ showPage("subjectPage");
+}
+
+// OPEN CURRENT AFFAIRS
+function showNews(){
+ $("newsHeading").textContent=
+ subject+" — "+date+" "+monthNames[month]+" "+year;
+
+ try{
+  currentNews=JSON.parse(localStorage.getItem(key())||"[]");
+ }catch(e){currentNews=[];}
+
+ renderNews();
+ showPage("newsPage");
+}
+
+// ADD NEWS
+function addNews(){
+ currentNews.push({
+  Date:date+" "+monthNames[month]+" "+year,
+  Topic:"",
+  "What Happened?":"",
+  Background:"",
+  "Why Is It Important?":"",
+  "Government Actions or Solutions":"",
+  "UPSC Relevance":"",
+  "Important Keywords":""
+ });
+
+ editingIndex=currentNews.length-1;
+ renderNews();
+}
+
+// RENDER NEWS
+function renderNews(){
+ const list=$("newsList");
+ list.innerHTML="";
+
+ currentNews.forEach((news,index)=>{
+  const card=document.createElement("div");
+  card.className="news-card";
+
+  const heading=document.createElement("h3");
+  heading.textContent=
+   (index+1)+". "+(news.Topic||"New Current Affairs");
+
+  const edit=document.createElement("button");
+  edit.textContent="Edit";
+  edit.onclick=()=>editNews(index);
+
+  const del=document.createElement("button");
+  del.textContent="Delete";
+  del.className="danger";
+  del.style.marginLeft="8px";
+  del.onclick=()=>{
+   if(confirm("Delete this current affairs entry?")){
+    currentNews.splice(index,1);
+    saveData();
+    renderNews();
+   }
+  };
+
+  const preview=document.createElement("p");
+  preview.textContent=news["What Happened?"]||"No notes written yet.";
+
+  card.append(heading,preview,edit,del);
+  list.appendChild(card);
+ });
+}
+
+// EDIT NEWS
+function editNews(index){
+ editingIndex=index;
+ const news=currentNews[index];
+ const list=$("newsList");
+ list.innerHTML="";
+
+ const form=document.createElement("div");
+ form.className="news-card";
+
+ steps.forEach(step=>{
+  const label=document.createElement("label");
+  label.className="step-label";
+  label.textContent=step;
+
+  let field;
+  if(step==="Date"){
+   field=document.createElement("input");
+   field.value=news[step]||"";
+   field.readOnly=true;
+  }else{
+   field=document.createElement("textarea");
+   field.value=news[step]||"";
+   field.placeholder="Write here...";
+  }
+
+  field.dataset.step=step;
+  form.append(label,field);
+ });
+
+ const save=document.createElement("button");
+ save.textContent="Save Current Affairs";
+ save.className="primary";
+ save.style.marginTop="12px";
+
+ save.onclick=()=>{
+  form.querySelectorAll("[data-step]").forEach(field=>{
+   news[field.dataset.step]=field.value;
+  });
+
+  saveData();
+  renderNews();
+ };
+
+ form.appendChild(save);
+ list.appendChild(form);
+}
+
+// SAVE
+function saveData(){
+ localStorage.setItem(key(),JSON.stringify(currentNews));
+}
+
+// NAVIGATION
+function goMonths(){showMonths();}
+function goDates(){showDates();}
+function goSubjects(){showSubjects();}
+
+// START
+setupYears();
+showMonths();
+
+</script>
+</body>
+</html>
