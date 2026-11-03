@@ -168,7 +168,85 @@ const steps=[
 const today=new Date();
 
 let year=today.getFullYear();
-let month=0;
+let month=0;// RENDER NEWS
+function renderNews(){
+  const list=$("newsList");
+  list.innerHTML="";
+
+  currentNews.forEach((news,index)=>{
+    const card=document.createElement("div");
+    card.className="news-card";
+
+    const heading=document.createElement("h3");
+    heading.textContent=
+      (index+1)+". "+(news.Topic||"New Current Affairs");
+
+    const preview=document.createElement("p");
+    preview.textContent=
+      news["What Happened?"]||"No notes written yet.";
+
+    // READ BUTTON
+    const read=document.createElement("button");
+    read.textContent="Read";
+    read.className="primary";
+    read.onclick=()=>readNews(index);
+
+    // EDIT BUTTON
+    const edit=document.createElement("button");
+    edit.textContent="Edit";
+    edit.style.marginLeft="8px";
+    edit.onclick=()=>editNews(index);
+
+    // DELETE BUTTON
+    const del=document.createElement("button");
+    del.textContent="Delete";
+    del.className="danger";
+    del.style.marginLeft="8px";
+    del.onclick=()=>{
+      if(confirm("Delete this current affairs entry?")){
+        currentNews.splice(index,1);
+        saveData();
+        renderNews();
+      }
+    };
+
+    card.append(heading,preview,read,edit,del);
+    list.appendChild(card);
+  });
+}
+
+// READ FULL CURRENT AFFAIRS
+function readNews(index){
+  const news=currentNews[index];
+  const list=$("newsList");
+  list.innerHTML="";
+
+  const page=document.createElement("div");
+  page.className="news-card";
+
+  const heading=document.createElement("h2");
+  heading.textContent=news.Topic||"Current Affairs";
+  page.appendChild(heading);
+
+  steps.forEach(step=>{
+    const label=document.createElement("h3");
+    label.textContent=step;
+
+    const content=document.createElement("p");
+    content.textContent=news[step]||"Not added yet.";
+    content.style.whiteSpace="pre-wrap";
+
+    page.append(label,content);
+  });
+
+  const back=document.createElement("button");
+  back.textContent="← Back to Current Affairs";
+  back.onclick=()=>renderNews();
+
+  page.appendChild(back);
+  list.appendChild(page);
+  window.scrollTo(0,0);
+}
 let date=1;
 let subject="";
 let editingIndex=-1;
